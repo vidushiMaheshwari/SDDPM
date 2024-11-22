@@ -66,6 +66,7 @@ parser.add_argument('--sample_step', type=int,default=5000, help='frequency of s
 # Evaluation
 parser.add_argument('--save_step', type=int,default=0, help='frequency of saving checkpoints, 0 to disable during training')
 parser.add_argument('--eval_step', type=int,default=0, help='frequency of evaluating model, 0 to disable during training')
+parser.add_argument('--eval_save_img', type=str,default='./logs/ddpm.png', help='frequency of evaluating model, 0 to disable during training')
 parser.add_argument('--num_images', type=int,default=50000, help='the number of generated images for evaluation')
 parser.add_argument('--fid_use_torch', default=True, help='calculate IS and FID on gpu')
 parser.add_argument('--fid_cache', default='./stats/cifar10.train.npz', help='FID cache')
@@ -122,7 +123,7 @@ def evaluate(sampler, model):
             batch_images = sampler(x_T.to(device)).cpu()
             images.append((batch_images + 1) / 2)
             grid = (make_grid(batch_images[:64,...]) + 1) / 2
-            save_image(grid, 'ddpm.png')
+            save_image(grid, args.eval_save_img)
         images = torch.cat(images, dim=0).numpy()
     model.train()
     (IS, IS_std), FID = get_inception_and_fid_score(
@@ -215,9 +216,6 @@ def train():
         trainer = torch.nn.DataParallel(trainer)
         net_sampler = torch.nn.DataParallel(net_sampler).to(device)
 
-
-
-
     # log setup
     if not os.path.exists(os.path.join(args.logdir,'sample')):
         os.makedirs(os.path.join(args.logdir, 'sample'))
@@ -270,7 +268,7 @@ def train():
                 net_model.train()
 
             # save
-            # print(f'Save model at {step} step')
+            # print(f'Save model at {step} step') 
             if args.save_step > 0 and step % args.save_step == 0 and step > 0:
                 ckpt = {
                     'net_model': net_model.state_dict(),
