@@ -66,6 +66,7 @@ parser.add_argument('--sample_step', type=int,default=5000, help='frequency of s
 # Evaluation
 parser.add_argument('--save_step', type=int,default=0, help='frequency of saving checkpoints, 0 to disable during training')
 parser.add_argument('--eval_step', type=int,default=0, help='frequency of evaluating model, 0 to disable during training')
+parser.add_argument('--eval_save_img', type=str,default='./logs/ddpm.png', help='frequency of evaluating model, 0 to disable during training')
 parser.add_argument('--num_images', type=int,default=50000, help='the number of generated images for evaluation')
 parser.add_argument('--fid_use_torch', default=True, help='calculate IS and FID on gpu')
 parser.add_argument('--fid_cache', default='./stats/cifar10.train.npz', help='FID cache')
@@ -75,7 +76,9 @@ parser.add_argument('--pre_trained_path', default='./pth/1224_4T.pt', help='FID 
 args = parser.parse_args()
 
 
-device = torch.device('cuda:0')
+# device = torch.device('cuda:0')
+# device = torch.device("mps")
+device = torch.device('cpu')
 
 
 def seed_everything(seed_value):
@@ -120,13 +123,16 @@ def evaluate(sampler, model):
             batch_images = sampler(x_T.to(device)).cpu()
             images.append((batch_images + 1) / 2)
             grid = (make_grid(batch_images[:64,...]) + 1) / 2
-            save_image(grid, 'ddpm.png')
+            save_image(grid, args.eval_save_img)
         images = torch.cat(images, dim=0).numpy()
     model.train()
     (IS, IS_std), FID = get_inception_and_fid_score(
         images, args.fid_cache, num_images=args.num_images,
         use_torch=args.fid_use_torch, verbose=True)
     return (IS, IS_std), FID, images
+
+def set_range(X):
+    return 2 * X - 1.
 
 
 def train():
@@ -162,14 +168,14 @@ def train():
                                             transform=transform)
     
     elif args.dataset == 'mnist':
-        SetRange = torchvision.transforms.Lambda(lambda X: 2 * X - 1.)
+        SetRange = torchvision.transforms.Lambda(set_range)
         transform = torchvision.transforms.Compose([
         torchvision.transforms.Resize((32,32)),
         torchvision.transforms.ToTensor(),
         SetRange])
-        dataset = torchvision.datasets.MNIST(root='/home/dataset/Mnist', 
+        dataset = torchvision.datasets.MNIST(root='dataset/Mnist', 
                                             train=True, 
-                                            download=True, 
+                                            download=True,
                                             transform=transform)
         
     elif args.dataset == 'lsun':
@@ -208,10 +214,7 @@ def train():
     
     if args.parallel:
         trainer = torch.nn.DataParallel(trainer)
-        net_sampler = torch.nn.DataParallel(net_sampler).cuda()
-
-
-
+        net_sampler = torch.nn.DataParallel(net_sampler).to(device)
 
     # log setup
     if not os.path.exists(os.path.join(args.logdir,'sample')):
@@ -219,6 +222,7 @@ def train():
     x_T = torch.randn(int(args.sample_size), int(args.img_ch), int(args.img_size), int(args.img_size))
     x_T = x_T.to(device)
     grid = (make_grid(next(iter(dataloader))[0][:args.sample_size]) + 1) / 2
+
     save_image(grid, os.path.join(args.logdir,'sample','groundtruth.png'))
 
     # show model size
@@ -264,7 +268,7 @@ def train():
                 net_model.train()
 
             # save
-            # print(f'Save model at {step} step')
+            # print(f'Save model at {step} step') 
             if args.save_step > 0 and step % args.save_step == 0 and step > 0:
                 ckpt = {
                     'net_model': net_model.state_dict(),
