@@ -194,7 +194,8 @@ def train():
     # model setup
     net_model = Spk_UNet(
        T=args.T, ch=args.ch, ch_mult=args.ch_mult, attn=args.attn,
-       num_res_blocks=args.num_res_blocks, dropout=args.dropout, timestep=args.timestep, img_ch=args.img_ch)
+       num_res_blocks=args.num_res_blocks, dropout=args.dropout, timestep=args.timestep, img_ch=args.img_ch, 
+       encoding=args.encoding)
     optim = torch.optim.Adam(net_model.parameters(), lr=args.lr)
     
     if args.resume:
