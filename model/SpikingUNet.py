@@ -329,6 +329,8 @@ class Spk_UNet(nn.Module):
             x = spikegen.rate(x, time_var_input=True)
         elif self.encoding == 'ttfs':
             x = self.ttfs_encoding(x)
+            # if self.training:
+            x = x.to(dtype=self.conv.weight.dtype) # Converting int to float in training for better gradient learning
             if self.training:
                 x = x.to(dtype=self.conv.weight.dtype) # Converting int to float in training for better gradient learning
         elif not self.encoding:
@@ -371,7 +373,6 @@ class Spk_UNet(nn.Module):
         h = self.swish(h_temp) + h  # [ T, B, C, H, W]
 
         h = self.membrane_output_layer(h)
-
 
         assert len(hs) == 0
         return h

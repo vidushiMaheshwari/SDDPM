@@ -53,7 +53,7 @@ parser.add_argument('--resume', default=False, action='store_true', help="load p
 parser.add_argument('--resume_model', type=str, help='resume model path')
 parser.add_argument('--lr', default=2e-3, help='target learning rate')
 parser.add_argument('--grad_clip', default=1., help="gradient norm clipping")
-parser.add_argument('--total_steps', type=int, default=500000, help='total training steps')
+parser.add_argument('--total_steps', type=int, default=500000, help='total training steps') # Num epochs?
 parser.add_argument('--warmup', default=500, help='learning rate warmup')
 parser.add_argument('--batch_size', type=int, default=32, help='batch size')
 parser.add_argument('--num_workers', type=int, default=4, help='workers of Dataloader')
@@ -317,6 +317,7 @@ def eval():
     sampler = GaussianDiffusionSampler(
         model, float(args.beta_1), float(args.beta_T), args.T, img_size=int(args.img_size),
         mean_type=args.mean_type, var_type=args.var_type,sample_type=args.sample_type,sample_steps=args.num_step).to(device)
+    sampler.model.eval()
     if args.parallel:
         sampler = torch.nn.DataParallel(sampler)
 
@@ -333,7 +334,7 @@ def eval():
             for j in range(batch_size):
                 save_image(batch_images[j], os.path.join(args.eval_img_dir, f'image_{i + j}.png'))
 
-        images = torch.cat(images, dim=0).numpy()
+        # images = torch.cat(images, dim=0).numpy()
     
     # (IS, IS_std), FID = get_inception_and_fid_score(
     #     images, args.fid_cache, num_images=args.num_images,
