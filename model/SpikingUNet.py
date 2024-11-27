@@ -331,6 +331,8 @@ class Spk_UNet(nn.Module):
             x = self.ttfs_encoding(x)
             # if self.training:
             x = x.to(dtype=self.conv.weight.dtype) # Converting int to float in training for better gradient learning
+            if self.training:
+                x = x.to(dtype=self.conv.weight.dtype) # Converting int to float in training for better gradient learning
         elif not self.encoding:
             x = x.unsqueeze(0).repeat(self.timestep, 1, 1, 1, 1)  # [T, B, C, H, W]
         
